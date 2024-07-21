@@ -2,28 +2,27 @@
 #![no_main]
 
 use cortex_m_rt::entry;
-use embedded_hal::digital::v2::OutputPin;
-use panic_halt;
-use stm32f1xx_hal::{delay::Delay, pac, prelude::*};
+use stm32g4::stm32g484::Peripherals;
 
-// This marks the entrypoint of our application. The cortex_m_rt creates some
-// startup code before this, but we don't need to worry about this
 #[entry]
 fn main() -> ! {
     // Get handles to the hardware objects. These functions can only be called
     // once, so that the borrowchecker can ensure you don't reconfigure
     // something by accident.
-    let dp = pac::Peripherals::take().unwrap();
+    let dp = Peripherals::take().unwrap();
     let cp = cortex_m::Peripherals::take().unwrap();
 
     // GPIO pins on the STM32F1 must be driven by the APB2 peripheral clock.
     // This must be enabled first. The HAL provides some abstractions for
     // us: First get a handle to the RCC peripheral:
-    let mut rcc = dp.RCC.constrain();
+    let mut rcc = dp.RCC;
+    rcc.cr.write(|w| w.hseon().set_bit());
+    while dp.RCC.cr.read().hserdy().bit() {}
     // Now we have access to the RCC's registers. The GPIOC can be enabled in
     // RCC_APB2ENR (Prog. Ref. Manual 8.3.7), therefore we must pass this
     // register to the `split` function.
-    let mut gpioc = dp.GPIOC.split(&mut rcc.apb2);
+
+    let mut gpioc = dp.GPIOC.
     // This gives us an exclusive handle to the GPIOC peripheral. To get the
     // handle to a single pin, we need to configure the pin first. Pin C13
     // is usually connected to the Bluepills onboard LED.
